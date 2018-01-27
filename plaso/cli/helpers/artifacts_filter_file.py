@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-"""The artifact definitions CLI arguments helper."""
+"""The artifacts filter file CLI arguments helper."""
 
 from __future__ import unicode_literals
 
 import os
-import sys
 
 from artifacts import errors as artifacts_errors
 from artifacts import reader as artifacts_reader
@@ -14,14 +13,13 @@ from plaso.cli import tools
 from plaso.cli.helpers import interface
 from plaso.cli.helpers import manager
 from plaso.lib import errors
-from plaso.preprocessors import manager as preprocessors_manager
 
 
-class ArtifactFilterFileArgumentsHelper(interface.ArgumentsHelper):
-  """Artifact definition CLI arguments helper."""
+class ArtifactsFilterFileArgumentsHelper(interface.ArgumentsHelper):
+  """Artifacts filter file CLI arguments helper."""
 
-  NAME = 'forensic_artifacts_filter_file'
-  DESCRIPTION = 'Artifact filter file command line arguments.'
+  NAME = 'artifacts_filter_file'
+  DESCRIPTION = 'Artifacts filter file command line arguments.'
 
   @classmethod
   def AddArguments(cls, argument_group):
@@ -35,11 +33,11 @@ class ArtifactFilterFileArgumentsHelper(interface.ArgumentsHelper):
           argparse group.
     """
     argument_group.add_argument(
-        '--artifact_definitions', '--artifact-definitions',
-        dest='artifact_definitions_path', type=str, metavar='PATH',
+        '--artifacts_filter_file', '--artifacts-filter-file',
+        dest='artifacts_filter_file', type=str, default=None,
         action='store', help=(
-            'Path to a directory containing artifact definitions, which are '
-            '.yaml files. Artifact definitions can be used to describe and '
+            'Path to a directory containing artifact filter definitions, which '
+            'are .yaml files. Artifact definitions can be used to describe and '
             'quickly collect data of interest, such as specific files or '
             'Windows Registry keys.'))
 
@@ -60,49 +58,37 @@ class ArtifactFilterFileArgumentsHelper(interface.ArgumentsHelper):
       raise errors.BadConfigObject(
           'Configuration object is not an instance of CLITool')
 
-    artifacts_path = getattr(options, 'artifact_definitions_path', None)
+    artifacts_filter_file = cls._ParseStringOption(options,
+                                                   'artifacts_filter_file')
 
-    data_location = getattr(configuration_object, '_data_location', None)
-    if ((not artifacts_path or not os.path.exists(artifacts_path)) and
-        data_location):
-      artifacts_path = os.path.dirname(data_location)
-      artifacts_path = os.path.join(artifacts_path, 'artifacts')
+    # Search the data location for the filter file.
+    if artifacts_filter_file and not os.path.isfile(artifacts_filter_file):
+      data_location = getattr(configuration_object, '_data_location', None)
+      if data_location:
+        artifacts_filter_file_basename = os.path.basename(artifacts_filter_file)
+        artifacts_filter_file_path = os.path.join(
+            data_location, artifacts_filter_file_basename)
+        if os.path.isfile(artifacts_filter_file_path):
+            artifacts_filter_file = artifacts_filter_file_path
 
-      if not os.path.exists(artifacts_path):
-        artifacts_path = os.path.join(sys.prefix, 'share', 'artifacts')
-      if not os.path.exists(artifacts_path):
-        artifacts_path = os.path.join(sys.prefix, 'local', 'share', 'artifacts')
-
-      if sys.prefix != '/usr':
-        if not os.path.exists(artifacts_path):
-          artifacts_path = os.path.join('/usr', 'share', 'artifacts')
-        if not os.path.exists(artifacts_path):
-          artifacts_path = os.path.join('/usr', 'local', 'share', 'artifacts')
-
-      if not os.path.exists(artifacts_path):
-        artifacts_path = None
-
-    if not artifacts_path or not os.path.exists(artifacts_path):
+    if artifacts_filter_file and not os.path.isfile(artifacts_filter_file):
       raise errors.BadConfigOption(
-          'Unable to determine path to artifact definitions.')
+          'No such artifacts filter file: {0:s}.'.format(
+              artifacts_filter_file))
 
     registry = artifacts_registry.ArtifactDefinitionsRegistry()
     reader = artifacts_reader.YamlArtifactsReader()
 
     try:
-      registry.ReadFromDirectory(reader, artifacts_path)
+      registry.ReadFromFile(reader, artifacts_filter_file)
 
     except (KeyError, artifacts_errors.FormatError) as exception:
       raise errors.BadConfigOption((
-          'Unable to read artifact definitions from: {0:s} with error: '
-          '{1!s}').format(artifacts_path, exception))
+          'Unable to read artifact filter definitions from: {0:s} with error: '
+          '{1!s}').format(artifacts_filter_file, exception))
 
-    for name in preprocessors_manager.PreprocessPluginsManager.GetNames():
-      if not registry.GetDefinitionByName(name):
-        raise errors.BadConfigOption(
-            'Missing required artifact definition: {0:s}'.format(name))
-
-    setattr(configuration_object, '_artifacts_registry', registry)
+    setattr(configuration_object, '_artifacts_filter_file',
+            artifacts_filter_file)
 
 
-manager.ArgumentHelperManager.RegisterHelper(ArtifactDefinitionsArgumentsHelper)
+manager.ArgumentHelperManager.RegisterHelper(ArtifactsFilterFileArgumentsHelper)

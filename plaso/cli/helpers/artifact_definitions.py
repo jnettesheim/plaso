@@ -83,6 +83,7 @@ class ArtifactDefinitionsArgumentsHelper(interface.ArgumentsHelper):
         artifacts_path = None
 
     if not artifacts_path or not os.path.exists(artifacts_path):
+      print 'TESTING %s' % (artifacts_path)
       raise errors.BadConfigOption(
           'Unable to determine path to artifact definitions.')
 

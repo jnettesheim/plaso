@@ -74,6 +74,7 @@ class ArgumentHelperManager(object):
         continue
 
       try:
+        print 'helper_name %s ---- PARSE OPTIONS' %(helper_name)
         helper_class.ParseOptions(options, config_object)
       except errors.BadConfigObject:
         pass
