@@ -10,7 +10,7 @@ from dfvfs.helpers import file_system_searcher
 from plaso.lib import py2to3
 
 
-class ForensicArtifactsFilterFile(object):
+class ArtifactsFilterFile(object):
   """Forensic artifacts file.
 
   A forensic artifacts file contains one or more forensic artifacts filters.
@@ -30,7 +30,7 @@ class ForensicArtifactsFilterFile(object):
     Args:
       path (str): path to a file that contains one or more forensic artifacts.
     """
-    super(ForensicArtifactsFilterFile, self).__init__()
+    super(ArtifactsFilterFile, self).__init__()
     self._path = path
 
   # TODO: split read and validation from BuildFindSpecs, raise instead of log

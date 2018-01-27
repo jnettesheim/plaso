@@ -21,6 +21,7 @@ from plaso.cli import status_view
 from plaso.cli import tool_options
 from plaso.cli import views
 from plaso.cli.helpers import manager as helpers_manager
+from plaso.engine import artifacts_filter_file
 from plaso.engine import engine
 from plaso.engine import filter_file
 from plaso.engine import knowledge_base
@@ -271,7 +272,9 @@ class PstealTool(
 
     self._status_view.SetMode(self._status_view_mode)
     self._status_view.SetSourceInformation(
-        self._source_path, source_type, filter_file=self._filter_file)
+        self._source_path, source_type,
+        artifacts_filter_file=self._artifacts_filter_file,
+        filter_file=self._filter_file)
 
     status_update_callback = (
         self._status_view.GetExtractionStatusUpdateCallback())
@@ -281,6 +284,7 @@ class PstealTool(
     self._output_writer.Write('Processing started.\n')
 
     session = engine.BaseEngine.CreateSession(
+        artifacts_filter_file=self._artifacts_filter_file,
         command_line_arguments=self._command_line_arguments,
         filter_file=self._filter_file,
         preferred_encoding=self.preferred_encoding,
@@ -316,7 +320,14 @@ class PstealTool(
     self._SetExtractionPreferredTimeZone(extraction_engine.knowledge_base)
 
     filter_find_specs = None
-    if configuration.filter_file:
+    if configuration.artifacts_filter_file:
+      environment_variables = (
+          extraction_engine.knowledge_base.GetEnvironmentVariables())
+      artifacts_filter_file_object = artifacts_filter_file.ArtifactsFilterFile(
+          configuration.artifacts_filter_file)
+      artifacts_filter_find_specs = artifacts_filter_file_object.BuildFindSpecs(
+          environment_variables=environment_variables)
+    elif configuration.filter_file:
       environment_variables = (
           extraction_engine.knowledge_base.GetEnvironmentVariables())
       filter_file_object = filter_file.FilterFile(configuration.filter_file)
@@ -327,21 +338,36 @@ class PstealTool(
     if single_process_mode:
       logging.debug('Starting extraction in single process mode.')
 
-      processing_status = extraction_engine.ProcessSources(
-          self._source_path_specs, storage_writer, self._resolver_context,
-          configuration, filter_find_specs=filter_find_specs,
-          status_update_callback=status_update_callback)
+      if configuration.artifacts_filter_file:
+        processing_status = extraction_engine.ProcessSources(
+            self._source_path_specs, storage_writer, self._resolver_context,
+            configuration, filter_find_specs=artifacts_filter_find_specs,
+            status_update_callback=status_update_callback)
+      else:
+        processing_status = extraction_engine.ProcessSources(
+            self._source_path_specs, storage_writer, self._resolver_context,
+            configuration, filter_find_specs=filter_find_specs,
+            status_update_callback=status_update_callback)
 
     else:
       logging.debug('Starting extraction in multi process mode.')
 
-      processing_status = extraction_engine.ProcessSources(
-          session.identifier, self._source_path_specs, storage_writer,
-          configuration,
-          enable_sigsegv_handler=self._enable_sigsegv_handler,
-          filter_find_specs=filter_find_specs,
-          number_of_worker_processes=self._number_of_extraction_workers,
-          status_update_callback=status_update_callback)
+      if configuration.artifacts_filter_file:
+        processing_status = extraction_engine.ProcessSources(
+            session.identifier, self._source_path_specs, storage_writer,
+            configuration,
+            enable_sigsegv_handler=self._enable_sigsegv_handler,
+            filter_find_specs=artifacts_filter_find_specs,
+            number_of_worker_processes=self._number_of_extraction_workers,
+            status_update_callback=status_update_callback)
+      else:
+        processing_status = extraction_engine.ProcessSources(
+            session.identifier, self._source_path_specs, storage_writer,
+            configuration,
+            enable_sigsegv_handler=self._enable_sigsegv_handler,
+            filter_find_specs=filter_find_specs,
+            number_of_worker_processes=self._number_of_extraction_workers,
+            status_update_callback=status_update_callback)
 
     self._status_view.PrintExtractionSummary(processing_status)
 
@@ -447,10 +473,13 @@ class PstealTool(
     # and preferred time zone options.
     self._ParseTimezoneOption(options)
 
+    print '111111'
     argument_helper_names = [
         'artifact_definitions', 'hashers', 'language', 'parsers']
+    print '222222'
     helpers_manager.ArgumentHelperManager.ParseOptions(
         options, self, names=argument_helper_names)
+    print '333333'
 
     self.list_hashers = self._hasher_names_string == 'list'
     self.list_language_identifiers = self._preferred_language == 'list'
