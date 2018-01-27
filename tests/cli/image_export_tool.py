@@ -398,6 +398,48 @@ class ImageExportToolTest(test_lib.CLIToolTestCase):
 
     self.assertEqual(sorted(extracted_files), expected_extracted_files)
 
+  @shared_test_lib.skipUnlessHasTestFile(['image.qcow2'])
+  def testProcessSourcesExtractWithArtifactsFilter(self):
+    """Tests the ProcessSources function with a filter file."""
+    output_writer = test_lib.TestOutputWriter(encoding='utf-8')
+    test_tool = image_export_tool.ImageExportTool(output_writer=output_writer)
+
+    options = test_lib.TestOptions()
+    options.artifact_definitions_path = self._GetTestFilePath(['artifacts'])
+    options.image = self._GetTestFilePath(['image.qcow2'])
+    options.quiet = True
+
+    with shared_test_lib.TempDirectory() as temp_directory:
+      artifacts_filter_file = os.path.join(temp_directory,
+                                           'artifacts_filter.txt')
+      with open(artifacts_filter_file, 'wb') as file_object:
+        file_object.write(b'name: TestFiles\n')
+        file_object.write(b'doc: Test Doc\n')
+        file_object.write(b'sources:\n')
+        file_object.write(b'- type: FILE\n')
+        file_object.write(b'  attributes:\n')
+        file_object.write(b'    paths: [\'\\a_directory\\*_file\']\n')
+        file_object.write(b'    separator: \'\\\'\n')
+        file_object.write(b'labels: [System]\n')
+        file_object.write(b'supported_os: [Windows]\n')
+
+      options.artifacts_filter_file = artifacts_filter_file
+      options.path = temp_directory
+
+      test_tool.ParseOptions(options)
+
+      test_tool.ProcessSources()
+
+      expected_extracted_files = sorted([
+          os.path.join(temp_directory, 'artifacts_filter.txt'),
+          os.path.join(temp_directory, 'a_directory'),
+          os.path.join(temp_directory, 'a_directory', 'another_file'),
+          os.path.join(temp_directory, 'a_directory', 'a_file')])
+
+      extracted_files = self._RecursiveList(temp_directory)
+
+    self.assertEqual(sorted(extracted_files), expected_extracted_files)
+
   @shared_test_lib.skipUnlessHasTestFile(['syslog_image.dd'])
   def testProcessSourcesExtractWithSignaturesFilter(self):
     """Tests the ProcessSources function with a signatures filter."""
