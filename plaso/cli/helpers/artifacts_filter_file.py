@@ -76,16 +76,17 @@ class ArtifactsFilterFileArgumentsHelper(interface.ArgumentsHelper):
           'No such artifacts filter file: {0:s}.'.format(
               artifacts_filter_file))
 
-    registry = artifacts_registry.ArtifactDefinitionsRegistry()
-    reader = artifacts_reader.YamlArtifactsReader()
+    if artifacts_filter_file and os.path.isfile(artifacts_filter_file):
+      registry = artifacts_registry.ArtifactDefinitionsRegistry()
+      reader = artifacts_reader.YamlArtifactsReader()
 
-    try:
-      registry.ReadFromFile(reader, artifacts_filter_file)
+      try:
+        registry.ReadFromFile(reader, artifacts_filter_file)
 
-    except (KeyError, artifacts_errors.FormatError) as exception:
-      raise errors.BadConfigOption((
-          'Unable to read artifact filter definitions from: {0:s} with error: '
-          '{1!s}').format(artifacts_filter_file, exception))
+      except (KeyError, artifacts_errors.FormatError) as exception:
+        raise errors.BadConfigOption((
+            'Unable to read artifact filter definitions from: {0:s} with error:'
+            ' {1!s}').format(artifacts_filter_file, exception))
 
     setattr(configuration_object, '_artifacts_filter_file',
             artifacts_filter_file)

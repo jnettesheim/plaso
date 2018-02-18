@@ -473,13 +473,10 @@ class PstealTool(
     # and preferred time zone options.
     self._ParseTimezoneOption(options)
 
-    print '111111'
     argument_helper_names = [
         'artifact_definitions', 'hashers', 'language', 'parsers']
-    print '222222'
     helpers_manager.ArgumentHelperManager.ParseOptions(
         options, self, names=argument_helper_names)
-    print '333333'
 
     self.list_hashers = self._hasher_names_string == 'list'
     self.list_language_identifiers = self._preferred_language == 'list'
