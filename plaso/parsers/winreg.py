@@ -5,6 +5,8 @@ from __future__ import unicode_literals
 
 import logging
 
+from artifacts import definitions as artifact_types
+
 from dfwinreg import errors as dfwinreg_errors
 from dfwinreg import interface as dfwinreg_interface
 from dfwinreg import regf as dfwinreg_regf
@@ -212,6 +214,12 @@ class WinRegistryParser(interface.FileObjectParser):
     if not root_key:
       return
 
+    find_specs = parser_mediator.knowledge_base.GetValue(
+      'artifact_filters')
+    # if find_specs:
+    #  [artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY]
+    if find_specs:
+      print 'FOUND REGISTRY FIND SPECS'
     try:
       self._ParseRecurseKeys(parser_mediator, root_key)
     except IOError as exception:

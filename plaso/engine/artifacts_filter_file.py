@@ -4,10 +4,17 @@
 from __future__ import unicode_literals
 
 import logging
+import re
+
+from artifacts import definitions as artifact_types
+from artifacts import errors as artifacts_errors
+from artifacts import reader as artifacts_reader
+from artifacts import registry as artifacts_registry
 
 from dfvfs.helpers import file_system_searcher
 
 from plaso.lib import py2to3
+from plaso.lib import errors
 
 
 class ArtifactsFilterFile(object):
@@ -17,14 +24,9 @@ class ArtifactsFilterFile(object):
 
   Forensic artifacts are defined in:
   https://github.com/ForensicArtifacts/artifacts/blob/master/docs/Artifacts%20definition%20format%20and%20style%20guide.asciidoc
-
-  If the path filter needs to have curly brackets in the path then these need
-  to be escaped with another curly bracket, for example
-  "\\System\\{my_attribute}\\{{123-AF25-E523}}\\KeyName", where
-  "{{123-AF25-E523}}" will be replaced with "{123-AF25-E523}" at runtime.
   """
 
-  def __init__(self, path):
+  def __init__(self, path, knowledge_base):
     """Initializes a filter file.
 
     Args:
@@ -32,6 +34,7 @@ class ArtifactsFilterFile(object):
     """
     super(ArtifactsFilterFile, self).__init__()
     self._path = path
+    self._knowledge_base = knowledge_base
 
   # TODO: split read and validation from BuildFindSpecs, raise instead of log
   # TODO: determine how to apply the path filters for exclusion.
@@ -55,48 +58,168 @@ class ArtifactsFilterFile(object):
           continue
 
         # Remove the drive letter.
-        if len(attribute_value) > 2 and attribute_value[1] == ':':
+        if len(attribute_value) >= 2 and attribute_value[1] == ':':
           _, _, attribute_value = attribute_value.rpartition(':')
 
-        if attribute_value.startswith('\\'):
-          attribute_value = attribute_value.replace('\\', '/')
+        # if attribute_value.startswith('\\'):
+        #  attribute_value = attribute_value.replace('\\', '/')
 
         path_attributes[attribute_name] = attribute_value
 
-    find_specs = []
+    find_specs = {}
     with open(self._path, 'rb') as file_object:
-      for line in file_object:
-        line = line.strip()
-        if line.startswith('#'):
-          continue
+      artifact_registry = artifacts_registry.ArtifactDefinitionsRegistry()
+      artifact_reader = artifacts_reader.YamlArtifactsReader()
+      # artifact_definitions = list(artifact_reader.ReadFileObject(file_object))
 
-        if path_attributes:
-          try:
-            line = line.format(**path_attributes)
-          except KeyError as exception:
-            logging.error((
-                'Unable to expand path filter: {0:s} with error: '
-                '{1:s}').format(line, exception))
-            continue
+      try:
+        artifact_registry.ReadFromFile(artifact_reader, self._path)
 
-        if not line.startswith('/'):
-          logging.warning((
-              'The path filter must be defined as an abolute path: '
-              '{0:s}').format(line))
-          continue
+      except (KeyError, artifacts_errors.FormatError) as exception:
+        raise errors.BadConfigOption((
+                                       'Unable to read artifact definitions '
+                                       'from: {0:s} with error: ''{1!s}')
+                                     .format(self._path, exception))
 
-        # Convert the path filters into a list of path segments and strip
-        # the root path segment.
-        path_segments = line.split('/')
-        path_segments.pop(0)
+      undefined_artifacts = artifact_registry.GetUndefinedArtifacts()
+      if undefined_artifacts:
+        raise errors.MissingDependencyError(
+          'Artifacts group referencing undefined artifacts: {0}'.format(
+            undefined_artifacts))
 
-        if not path_segments[-1]:
-          logging.warning(
-              'Empty last path segment in path filter: {0:s}'.format(line))
-          continue
+      for definition in artifact_registry.GetDefinitions():
+        for source in definition.sources:
+          if source.type_indicator == artifact_types.TYPE_INDICATOR_FILE:
+            for path_entry in source.paths:
+              for path in self._ExpandGlobs(path_entry):
+                if path_attributes:
+                  try:
+                    if '%%environ_' in path:
+                      path = path.replace('%%environ_', '{')
+                      path = path.replace('%%', '}')
+                      path = path.format(**path_attributes)
+                  except KeyError as exception:
+                    logging.error((
+                        'Unable to expand path filter: {0:s} with error: '
+                        '{1:s}').format(path, exception))
+                    continue
 
-        find_spec = file_system_searcher.FindSpec(
-            location_regex=path_segments, case_sensitive=False)
-        find_specs.append(find_spec)
+                if '%%' in path:
+                  logging.warning(('Unable to expand path attribute, unknown '
+                                   'variable: {0:s} ').format(path))
+                  continue
 
-    return find_specs
+                if not path.startswith('/') and not path.startswith('\\'):
+                  logging.warning((
+                      'The path filter must be defined as an absolute path: '
+                      '{0:s}').format(path))
+                  continue
+
+                # Convert the path filters into a list of path segments and strip
+                # the root path segment.
+                path_segments = path.split(source.separator)
+                print path_segments
+                path_segments.pop(0)
+
+                if not path_segments[-1]:
+                  logging.warning(
+                      'Empty last path segment in path filter: {0:s}'.format(
+                        path))
+                  continue
+
+                find_spec = file_system_searcher.FindSpec(
+                    location_glob=path_segments, case_sensitive=False)
+                if artifact_types.TYPE_INDICATOR_FILE in find_specs:
+                  find_specs[artifact_types.TYPE_INDICATOR_FILE].append(find_spec)
+                else:
+                  find_specs[artifact_types.TYPE_INDICATOR_FILE] = []
+                  find_specs[artifact_types.TYPE_INDICATOR_FILE].append(find_spec)
+          elif (source.type_indicator ==
+                artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY or
+                artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_VALUE):
+            if source.type_indicator == artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY:
+              keys = source.keys
+            elif source.type_indicator == artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_VALUE:
+              for key_pair in source.key_value_pairs:
+                if keys is None:
+                  keys = set()
+                  keys.add(key_pair.get('key'))
+                keys.add(key_pair.get('key'))
+            for key_entry in keys:
+              for key in self._ExpandGlobs(key_entry):
+                if path_attributes:
+                  try:
+                    key = key.replace('%%environ_', '{')
+                    key = key.replace('%%', '}')
+                    key = key.format(**path_attributes)
+                  except KeyError as exception:
+                    logging.error((
+                        'Unable to expand path filter: {0:s} with error: '
+                        '{1:s}').format(key, exception))
+                    continue
+
+                if not key.startswith('/'):
+                  logging.warning((
+                      'The path filter must be defined as an abolute path: '
+                      '{0:s}').format(key))
+                  continue
+
+                # Convert the path filters into a list of path segments and strip
+                # the root path segment.
+                path_segments = key.split(source.separator)
+                path_segments.pop(0)
+
+                if not path_segments[-1]:
+                  logging.warning(
+                      'Empty last path segment in path filter: {0:s}'.format(
+                        line))
+                  continue
+
+                find_spec = file_system_searcher.FindSpec(
+                    location_glob=path_segments, case_sensitive=False)
+              if artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY in find_specs:
+                find_specs[
+                  artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(find_spec)
+              else:
+                find_specs[
+                  artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY] = []
+                find_specs[
+                  artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(
+                  find_spec)
+    self._knowledge_base.SetValue('artifact_filters', find_specs)
+
+
+  def _ExpandGlobs(self, path):
+    """Expand globs present in an artifact entry.
+
+    Args:
+      path (str):  String path to be expanded.
+
+    Returns:
+      list[str]: String path expanded for each glob.
+    """
+
+    match = re.search('(.*)\*\*(\d+)?$', path)
+    if match:
+      if match.group(2):
+        iterations = match.group(2)
+      else:
+        iterations = 10
+      paths = [self._BuildString(match.group(1), counter) for counter in
+               range(int(iterations))]
+      return paths
+    else:
+      return [path]
+
+  def _BuildString(self, path, count):
+    """Append wildcard entries to end of string.
+
+    Args:
+      path (str):  String path to append wildcards to.
+
+    Returns:
+      path (str): String path expanded with wildcards.
+    """
+    for _ in range(count):
+      path += '\*'
+    return path
