@@ -11,6 +11,7 @@ from dfwinreg import errors as dfwinreg_errors
 from dfwinreg import interface as dfwinreg_interface
 from dfwinreg import regf as dfwinreg_regf
 from dfwinreg import registry as dfwinreg_registry
+from dfwinreg import registry_searcher as dfwinreg_registry_searcher
 
 from plaso.lib import specification
 from plaso.filters import path_filter
@@ -190,6 +191,39 @@ class WinRegistryParser(interface.FileObjectParser):
       if matching_plugin:
         self._ParseKeyWithPlugin(parser_mediator, registry_key, matching_plugin)
 
+
+  def _ParseKeysFromFindSpecs(self, parser_mediator, win_registry, find_specs):
+    """Parses the Registry keys from FindSpecs.
+
+    Args:
+      parser_mediator (ParserMediator): parser mediator.
+      win_registry (dfwinreg.WinRegistryKey): root Windows Registry key.
+      find_specs (dfwinreg.FindSpecs): Keys to search for.
+    """
+    searcher = dfwinreg_registry_searcher.WinRegistrySearcher(win_registry)
+    for registry_key_path in list(searcher.Find(find_specs=find_specs)):
+      registry_key = searcher.GetKeyByPath(registry_key_path)
+      if parser_mediator.abort:
+        break
+
+      matching_plugin = None
+
+      normalized_key_path = self._NormalizeKeyPath(registry_key.path)
+      if self._path_filter.CheckPath(normalized_key_path):
+        matching_plugin = self._plugin_per_key_path[normalized_key_path]
+
+      else:
+        for plugin in self._plugins_without_key_paths:
+          if self._CanProcessKeyWithPlugin(registry_key, plugin):
+            matching_plugin = plugin
+            break
+
+      if not matching_plugin:
+        matching_plugin = self._default_plugin
+
+      if matching_plugin:
+        self._ParseKeyWithPlugin(parser_mediator, registry_key, matching_plugin)
+
   def ParseFileObject(self, parser_mediator, file_object, **kwargs):
     """Parses a Windows Registry file-like object.
 
@@ -216,14 +250,19 @@ class WinRegistryParser(interface.FileObjectParser):
 
     find_specs = parser_mediator.knowledge_base.GetValue(
       'artifact_filters')
-    # if find_specs:
-    #  [artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY]
-    if find_specs:
-      print 'FOUND REGISTRY FIND SPECS'
-    try:
-      self._ParseRecurseKeys(parser_mediator, root_key)
-    except IOError as exception:
-      parser_mediator.ProduceExtractionError('{0:s}'.format(exception))
+    if find_specs.get(artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY):
+      win_registry.MapFile(key_path_prefix, registry_file)
+      try:
+        self._ParseKeysFromFindSpecs(
+          parser_mediator, win_registry,
+          find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY])
+      except IOError as exception:
+        parser_mediator.ProduceExtractionError('{0:s}'.format(exception))
+    else:
+      try:
+        self._ParseRecurseKeys(parser_mediator, root_key)
+      except IOError as exception:
+        parser_mediator.ProduceExtractionError('{0:s}'.format(exception))
 
 
 manager.ParsersManager.RegisterParser(WinRegistryParser)
