@@ -12,6 +12,8 @@ from artifacts import reader as artifacts_reader
 from artifacts import registry as artifacts_registry
 
 from dfvfs.helpers import file_system_searcher
+from dfwinreg import registry_searcher
+
 
 from plaso.lib import py2to3
 from plaso.lib import errors
@@ -157,26 +159,8 @@ class ArtifactsFilterFile(object):
                         'Unable to expand path filter: {0:s} with error: '
                         '{1:s}').format(key, exception))
                     continue
-
-                if not key.startswith('/'):
-                  logging.warning((
-                      'The path filter must be defined as an abolute path: '
-                      '{0:s}').format(key))
-                  continue
-
-                # Convert the path filters into a list of path segments and strip
-                # the root path segment.
-                path_segments = key.split(source.separator)
-                path_segments.pop(0)
-
-                if not path_segments[-1]:
-                  logging.warning(
-                      'Empty last path segment in path filter: {0:s}'.format(
-                        line))
-                  continue
-
-                find_spec = file_system_searcher.FindSpec(
-                    location_glob=path_segments, case_sensitive=False)
+                find_spec = registry_searcher.FindSpec(
+                  key_path_glob=key)
               if artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY in find_specs:
                 find_specs[
                   artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(find_spec)
