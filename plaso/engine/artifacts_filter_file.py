@@ -172,7 +172,7 @@ class ArtifactsFilterFile(object):
                 find_specs[
                   artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(
                   find_spec)
-    self._knowledge_base.SetValue('artifact_filters', find_specs)
+    self._knowledge_base.SetValue(ARTIFACTS_FILTER_FILE, find_specs)
 
 
   def _ExpandGlobs(self, path):

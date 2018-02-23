@@ -8,6 +8,8 @@ import logging
 import os
 import textwrap
 
+from artifacts import definitions as artifact_types
+
 from dfvfs.helpers import file_system_searcher
 from dfvfs.lib import errors as dfvfs_errors
 from dfvfs.path import factory as path_spec_factory
@@ -318,7 +320,6 @@ class ImageExportTool(storage_media_tool.StorageMediaTool):
           'Extracting file entries from: {0:s}\n'.format(display_name))
 
       environment_variables = self._knowledge_base.GetEnvironmentVariables()
-      filter_find_specs = None
       if artifacts_filter_file_path:
           artifacts_filter_file_object = \
               artifacts_filter_file.ArtifactsFilterFile(
@@ -326,7 +327,7 @@ class ImageExportTool(storage_media_tool.StorageMediaTool):
           artifacts_filter_file_object.BuildFindSpecs(
               environment_variables=environment_variables)
           find_specs = self._knowledge_base.GetValue(
-              artifacts_filter_file.ArtifactsFilterFile)[
+              artifacts_filter_file.ARTIFACTS_FILTER_FILE)[
               artifact_types.TYPE_INDICATOR_FILE]
       elif filter_file:
           environment_variables = (
