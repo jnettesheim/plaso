@@ -476,7 +476,7 @@ class Log2TimelineTool(extraction_tool.ExtractionTool):
       artifacts_filter_file_object.BuildFindSpecs(
           environment_variables=environment_variables)
       filter_find_specs = extraction_engine.knowledge_base.GetValue(
-          artifacts_filter_file.ArtifactsFilterFile)[
+          artifacts_filter_file.ARTIFACTS_FILTER_FILE)[
           artifact_types.TYPE_INDICATOR_FILE]
     elif configuration.filter_file:
       environment_variables = (
