@@ -124,7 +124,8 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
 
     test_filter_file.BuildFindSpecs(
         environment_variables=None)
-    find_specs = knowledge_base.GetValue('artifact_filters')
+    find_specs = knowledge_base.GetValue(
+      artifacts_filter_file.ArtifactsFilterFile)
 
     try:
       os.remove(artifacts_filter_file_path)

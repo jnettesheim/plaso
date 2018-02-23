@@ -142,7 +142,7 @@ class ArtifactsFilterFile(object):
                 artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY or
                 artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_VALUE):
             if source.type_indicator == artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY:
-              keys = source.keys
+              keys = set(source.keys)
             elif source.type_indicator == artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_VALUE:
               for key_pair in source.key_value_pairs:
                 if keys is None:
