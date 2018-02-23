@@ -13,6 +13,7 @@ from dfwinreg import regf as dfwinreg_regf
 from dfwinreg import registry as dfwinreg_registry
 from dfwinreg import registry_searcher as dfwinreg_registry_searcher
 
+from plaso.engine import artifacts_filter_file
 from plaso.lib import specification
 from plaso.filters import path_filter
 from plaso.parsers import interface
@@ -249,8 +250,9 @@ class WinRegistryParser(interface.FileObjectParser):
       return
 
     find_specs = parser_mediator.knowledge_base.GetValue(
-      'artifact_filters')
-    if find_specs.get(artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY):
+      artifacts_filter_file.ARTIFACTS_FILTER_FILE)
+    if find_specs and find_specs.get(
+            artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY):
       win_registry.MapFile(key_path_prefix, registry_file)
       try:
         self._ParseKeysFromFindSpecs(

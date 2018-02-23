@@ -19,6 +19,9 @@ from plaso.lib import py2to3
 from plaso.lib import errors
 
 
+ARTIFACTS_FILTER_FILE = 'ARTIFACT_FILTER_FILE'
+
+
 class ArtifactsFilterFile(object):
   """Forensic artifacts file.
 
@@ -120,7 +123,6 @@ class ArtifactsFilterFile(object):
                 # Convert the path filters into a list of path segments and strip
                 # the root path segment.
                 path_segments = path.split(source.separator)
-                print path_segments
                 path_segments.pop(0)
 
                 if not path_segments[-1]:

@@ -325,8 +325,11 @@ class PstealTool(
           extraction_engine.knowledge_base.GetEnvironmentVariables())
       artifacts_filter_file_object = artifacts_filter_file.ArtifactsFilterFile(
           configuration.artifacts_filter_file)
-      artifacts_filter_find_specs = artifacts_filter_file_object.BuildFindSpecs(
+      artifacts_filter_file_object.BuildFindSpecs(
           environment_variables=environment_variables)
+      filter_find_specs = extraction_engine.knowledge_base.GetValue(
+          artifacts_filter_file.ArtifactsFilterFile)[
+          artifact_types.TYPE_INDICATOR_FILE]
     elif configuration.filter_file:
       environment_variables = (
           extraction_engine.knowledge_base.GetEnvironmentVariables())
@@ -338,36 +341,21 @@ class PstealTool(
     if single_process_mode:
       logging.debug('Starting extraction in single process mode.')
 
-      if configuration.artifacts_filter_file:
-        processing_status = extraction_engine.ProcessSources(
-            self._source_path_specs, storage_writer, self._resolver_context,
-            configuration, filter_find_specs=artifacts_filter_find_specs,
-            status_update_callback=status_update_callback)
-      else:
-        processing_status = extraction_engine.ProcessSources(
-            self._source_path_specs, storage_writer, self._resolver_context,
-            configuration, filter_find_specs=filter_find_specs,
-            status_update_callback=status_update_callback)
+      processing_status = extraction_engine.ProcessSources(
+          self._source_path_specs, storage_writer, self._resolver_context,
+          configuration, filter_find_specs=filter_find_specs,
+          status_update_callback=status_update_callback)
 
     else:
       logging.debug('Starting extraction in multi process mode.')
 
-      if configuration.artifacts_filter_file:
-        processing_status = extraction_engine.ProcessSources(
-            session.identifier, self._source_path_specs, storage_writer,
-            configuration,
-            enable_sigsegv_handler=self._enable_sigsegv_handler,
-            filter_find_specs=artifacts_filter_find_specs,
-            number_of_worker_processes=self._number_of_extraction_workers,
-            status_update_callback=status_update_callback)
-      else:
-        processing_status = extraction_engine.ProcessSources(
-            session.identifier, self._source_path_specs, storage_writer,
-            configuration,
-            enable_sigsegv_handler=self._enable_sigsegv_handler,
-            filter_find_specs=filter_find_specs,
-            number_of_worker_processes=self._number_of_extraction_workers,
-            status_update_callback=status_update_callback)
+      processing_status = extraction_engine.ProcessSources(
+          session.identifier, self._source_path_specs, storage_writer,
+          configuration,
+          enable_sigsegv_handler=self._enable_sigsegv_handler,
+          filter_find_specs=filter_find_specs,
+          number_of_worker_processes=self._number_of_extraction_workers,
+          status_update_callback=status_update_callback)
 
     self._status_view.PrintExtractionSummary(processing_status)
 
