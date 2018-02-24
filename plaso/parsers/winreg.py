@@ -203,7 +203,9 @@ class WinRegistryParser(interface.FileObjectParser):
     """
     searcher = dfwinreg_registry_searcher.WinRegistrySearcher(win_registry)
     for registry_key_path in list(searcher.Find(find_specs=find_specs)):
+
       registry_key = searcher.GetKeyByPath(registry_key_path)
+
       if parser_mediator.abort:
         break
 
@@ -232,6 +234,7 @@ class WinRegistryParser(interface.FileObjectParser):
       parser_mediator (ParserMediator): parser mediator.
       file_object (dfvfs.FileIO): a file-like object.
     """
+
     win_registry_reader = FileObjectWinRegistryFileReader()
 
     try:
@@ -250,16 +253,26 @@ class WinRegistryParser(interface.FileObjectParser):
       return
 
     find_specs = parser_mediator.knowledge_base.GetValue(
-      artifacts_filter_file.ARTIFACTS_FILTER_FILE)
-    if find_specs and find_specs.get(
-            artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY):
+        artifacts_filter_file.ARTIFACTS_FILTER_FILE)
+
+    if (find_specs and
+        find_specs.get(artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY)):
       win_registry.MapFile(key_path_prefix, registry_file)
-      try:
-        self._ParseKeysFromFindSpecs(
-          parser_mediator, win_registry,
-          find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY])
-      except IOError as exception:
-        parser_mediator.ProduceExtractionError('{0:s}'.format(exception))
+      if key_path_prefix in artifacts_filter_file.INCOMPATIBLE_DFWINREG_KEYS:
+        logging.debug('Artifacts Registry Filters are not supported for '
+                      'the registry prefix {0:s}. '
+                      'Parsing entire file.'.format(key_path_prefix))
+        try:
+          self._ParseRecurseKeys(parser_mediator, root_key)
+        except IOError as exception:
+          parser_mediator.ProduceExtractionError('{0:s}'.format(exception))
+      else:
+        try:
+          self._ParseKeysFromFindSpecs(
+              parser_mediator, win_registry,
+              find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY])
+        except IOError as exception:
+          parser_mediator.ProduceExtractionError('{0:s}'.format(exception))
     else:
       try:
         self._ParseRecurseKeys(parser_mediator, root_key)
