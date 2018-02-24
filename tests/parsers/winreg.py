@@ -109,21 +109,28 @@ class WinRegistryParserTest(test_lib.ParserTestCase):
   def testParseSystemWithArtifactsFilter(self):
     """Tests the Parse function on a SYSTEM file."""
     parser = winreg.WinRegistryParser()
-    artifacts_filter_file_path = ''
     knowledge_base = knowledge_base_engine.KnowledgeBase()
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
       test_filter_file = artifacts_filter_file.ArtifactsFilterFile(
-        temp_file.name, knowledge_base)
+          temp_file.name, knowledge_base)
       temp_file.write(b'name: TestRegistryKey\n')
       temp_file.write(b'doc: Test Registry Doc Key\n')
       temp_file.write(b'sources:\n')
       temp_file.write(b'- type: REGISTRY_KEY\n')
       temp_file.write(b'  attributes:\n')
       temp_file.write(b'    keys:\n')
-      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\services\\*\\*\'\n')
-      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\services\\*\\Parameters\\*\'\n')
-      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Enum\\USBSTOR\'\n')
-      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Enum\\USBSTOR\\*\'\n')
+      temp_file.write(
+          b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\'
+          b'services\\*\\*\'\n')
+      temp_file.write(
+          b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\'
+          b'services\\*\\Parameters\\*\'\n')
+      temp_file.write(
+          b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\'
+          b'Enum\\USBSTOR\'\n')
+      temp_file.write(
+          b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\'
+          b'Enum\\USBSTOR\\*\'\n')
       temp_file.write(b'supported_os: [Windows]\n')
       temp_file.write(b'---\n')
       temp_file.write(b'name: TestRegistryValue\n')
@@ -131,7 +138,10 @@ class WinRegistryParserTest(test_lib.ParserTestCase):
       temp_file.write(b'sources:\n')
       temp_file.write(b'- type: REGISTRY_VALUE\n')
       temp_file.write(b'  attributes:\n')
-      temp_file.write(b'    key_value_pairs: [{key: \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Session Manager\', value: \'BootExecute\'}]\n')
+      temp_file.write(
+        b'    key_value_pairs: [{key: \'HKEY_LOCAL_MACHINE\\System\\'
+        b'CurrentControlSet\\Control\\Session Manager\', '
+        b'value: \'BootExecute\'}]\n')
       temp_file.write(b'supported_os: [Windows]\n')
       temp_file.write(b'\n')
 
