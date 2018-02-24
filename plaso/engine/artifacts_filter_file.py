@@ -19,7 +19,10 @@ from plaso.lib import py2to3
 from plaso.lib import errors
 
 
-ARTIFACTS_FILTER_FILE = 'ARTIFACT_FILTER_FILE'
+ARTIFACTS_FILTER_FILE = 'ARTIFACTS_FILTER_FILE'
+INCOMPATIBLE_DFWINREG_KEYS = ['HKEY_CURRENT_USER',
+                              'HKEY_USERS',
+                              'HKEY_CLASSES_ROOT']
 
 
 class ArtifactsFilterFile(object):
@@ -81,9 +84,10 @@ class ArtifactsFilterFile(object):
               artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY):
           keys = set(source.keys)
           for key_entry in keys:
-            self.BuildFindSpecsFromRegistryArtifact(key_entry,
-                                                    path_attributes,
-                                                    find_specs)
+            if self._CheckKeyCompatibility(key_entry):
+              self.BuildFindSpecsFromRegistryArtifact(key_entry,
+                                                      path_attributes,
+                                                      find_specs)
         elif (source.type_indicator ==
               artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_VALUE):
           logging.warning(('Unable to handle Registry Value, extracting '
@@ -95,9 +99,13 @@ class ArtifactsFilterFile(object):
               keys.add(key_pair.get('key'))
             keys.add(key_pair.get('key'))
           for key_entry in keys:
-            self.BuildFindSpecsFromRegistryArtifact(key_entry,
-                                                    path_attributes,
-                                                    find_specs)
+            if self._CheckKeyCompatibility(key_entry):
+              self.BuildFindSpecsFromRegistryArtifact(key_entry,
+                                                      path_attributes,
+                                                      find_specs)
+        else:
+          logging.warning(('Unable to handle artifact, plaso does not '
+                           'support: {0:s} ').format(source.type_indicator))
     self._knowledge_base.SetValue(ARTIFACTS_FILTER_FILE, find_specs)
 
   def BuildFindSpecsFromFileArtifact(self, path_entry, separator,
@@ -191,6 +199,22 @@ class ArtifactsFilterFile(object):
           artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY] = []
       find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(
           find_spec)
+
+  def _CheckKeyCompatibility(self, key):
+    """Check if a registry key is compatible with dfwinreg.
+
+    Args:
+      key (str):  String key to to check for dfwinreg compatibility.
+
+    Returns:
+      (bool): Boolean whether key is compatible or not.
+    """
+    key_path_prefix = key.split('\\')[0]
+    if key_path_prefix not in INCOMPATIBLE_DFWINREG_KEYS:
+      return True
+    logging.warning('Key {0:s}, has a prefix {1:s} that is not supported '
+                    'by dfwinreg presently'.format(key, key_path_prefix))
+    return False
 
   def _ExpandGlobs(self, path):
     """Expand globs present in an artifact entry.
