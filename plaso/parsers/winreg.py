@@ -227,6 +227,7 @@ class WinRegistryParser(interface.FileObjectParser):
       if matching_plugin:
         self._ParseKeyWithPlugin(parser_mediator, registry_key, matching_plugin)
 
+
   def ParseFileObject(self, parser_mediator, file_object, **kwargs):
     """Parses a Windows Registry file-like object.
 
@@ -258,10 +259,10 @@ class WinRegistryParser(interface.FileObjectParser):
     if (find_specs and
         find_specs.get(artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY)):
       win_registry.MapFile(key_path_prefix, registry_file)
-      if key_path_prefix in artifacts_filter_file.INCOMPATIBLE_DFWINREG_KEYS:
-        logging.debug('Artifacts Registry Filters are not supported for '
-                      'the registry prefix {0:s}. '
-                      'Parsing entire file.'.format(key_path_prefix))
+      if key_path_prefix not in artifacts_filter_file.COMPATIBLE_DFWINREG_KEYS:
+        logging.warning('Artifacts Registry Filters are not supported for '
+                        'the registry prefix {0:s}. '
+                        'Parsing entire file.'.format(key_path_prefix))
         try:
           self._ParseRecurseKeys(parser_mediator, root_key)
         except IOError as exception:
@@ -278,6 +279,5 @@ class WinRegistryParser(interface.FileObjectParser):
         self._ParseRecurseKeys(parser_mediator, root_key)
       except IOError as exception:
         parser_mediator.ProduceExtractionError('{0:s}'.format(exception))
-
 
 manager.ParsersManager.RegisterParser(WinRegistryParser)

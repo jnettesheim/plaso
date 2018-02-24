@@ -20,9 +20,7 @@ from plaso.lib import errors
 
 
 ARTIFACTS_FILTER_FILE = 'ARTIFACTS_FILTER_FILE'
-INCOMPATIBLE_DFWINREG_KEYS = ['HKEY_CURRENT_USER',
-                              'HKEY_USERS',
-                              'HKEY_CLASSES_ROOT']
+COMPATIBLE_DFWINREG_KEYS = ['HKEY_LOCAL_MACHINE']
 
 
 class ArtifactsFilterFile(object):
@@ -210,10 +208,10 @@ class ArtifactsFilterFile(object):
       (bool): Boolean whether key is compatible or not.
     """
     key_path_prefix = key.split('\\')[0]
-    if key_path_prefix not in INCOMPATIBLE_DFWINREG_KEYS:
+    if key_path_prefix in COMPATIBLE_DFWINREG_KEYS:
       return True
-    logging.warning('Key {0:s}, has a prefix {1:s} that is not supported '
-                    'by dfwinreg presently'.format(key, key_path_prefix))
+    # logging.warning('Key {0:s}, has a prefix {1:s} that is not supported '
+    #                'by dfwinreg presently'.format(key, key_path_prefix))
     return False
 
   def _ExpandGlobs(self, path):
