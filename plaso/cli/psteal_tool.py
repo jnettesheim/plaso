@@ -11,6 +11,7 @@ import os
 import sys
 import textwrap
 
+from artifacts import definitions as artifact_types
 from dfvfs.lib import definitions as dfvfs_definitions
 
 # The following import makes sure the output modules are registered.
@@ -324,12 +325,12 @@ class PstealTool(
       environment_variables = (
           extraction_engine.knowledge_base.GetEnvironmentVariables())
       artifacts_filter_file_object = artifacts_filter_file.ArtifactsFilterFile(
-          configuration.artifacts_filter_file)
+          configuration.artifacts_filter_file, extraction_engine.knowledge_base)
       artifacts_filter_file_object.BuildFindSpecs(
           environment_variables=environment_variables)
       filter_find_specs = extraction_engine.knowledge_base.GetValue(
           artifacts_filter_file.ArtifactsFilterFile)[
-          artifact_types.TYPE_INDICATOR_FILE]
+              artifact_types.TYPE_INDICATOR_FILE]
     elif configuration.filter_file:
       environment_variables = (
           extraction_engine.knowledge_base.GetEnvironmentVariables())

@@ -39,7 +39,7 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
     knowledge_base = knowledge_base_engine.KnowledgeBase()
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
       test_filter_file = artifacts_filter_file.ArtifactsFilterFile(
-        temp_file.name, knowledge_base)
+          temp_file.name, knowledge_base)
       temp_file.write(b'name: TestFiles\n')
       temp_file.write(b'doc: Test Doc\n')
       temp_file.write(b'sources:\n')
@@ -73,7 +73,7 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
     test_filter_file.BuildFindSpecs(
         environment_variables=[environment_variable, environment_variable_2])
     find_specs = knowledge_base.GetValue(
-      artifacts_filter_file.ARTIFACTS_FILTER_FILE)
+        artifacts_filter_file.ARTIFACTS_FILTER_FILE)
 
 
     try:
@@ -81,7 +81,7 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
     except (OSError, IOError) as exception:
       logging.warning(
           'Unable to remove artifacts_filter file: {0:s} with error: {1!s}'.
-            format(artifacts_filter_file_path, exception))
+          format(artifacts_filter_file_path, exception))
 
     self.assertEqual(len(find_specs[artifact_types.TYPE_INDICATOR_FILE]), 4)
 
@@ -92,7 +92,7 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
         file_system, path_spec)
 
     path_spec_generator = searcher.Find(
-      find_specs=find_specs[artifact_types.TYPE_INDICATOR_FILE])
+        find_specs=find_specs[artifact_types.TYPE_INDICATOR_FILE])
     self.assertIsNotNone(path_spec_generator)
 
     path_specs = list(path_spec_generator)
@@ -102,7 +102,7 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
 
     with self.assertRaises(IOError):
       test_filter_file = artifacts_filter_file.ArtifactsFilterFile(
-        'thisfiledoesnotexist', knowledge_base)
+          'thisfiledoesnotexist', knowledge_base)
       test_filter_file.BuildFindSpecs()
 
     file_system.Close()
@@ -114,29 +114,30 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
     knowledge_base = knowledge_base_engine.KnowledgeBase()
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
       test_filter_file = artifacts_filter_file.ArtifactsFilterFile(
-        temp_file.name, knowledge_base)
+          temp_file.name, knowledge_base)
       temp_file.write(b'name: TestRegistry\n')
       temp_file.write(b'doc: Test Registry Doc\n')
       temp_file.write(b'sources:\n')
       temp_file.write(b'- type: REGISTRY_KEY\n')
       temp_file.write(b'  attributes:\n')
-      temp_file.write(b'    keys: [\'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\SecurityProviders\\*\']\n')
+      temp_file.write(b'    keys: [\'HKEY_LOCAL_MACHINE\\System\\CurrentControl'
+                      b'Set\\Control\\SecurityProviders\\*\']\n')
       temp_file.write(b'supported_os: [Windows]\n')
 
     test_filter_file.BuildFindSpecs(
         environment_variables=None)
     find_specs = knowledge_base.GetValue(
-      artifacts_filter_file.ARTIFACTS_FILTER_FILE)
+        artifacts_filter_file.ARTIFACTS_FILTER_FILE)
 
     try:
       os.remove(artifacts_filter_file_path)
     except (OSError, IOError) as exception:
       logging.warning(
           'Unable to remove artifacts_filter file: {0:s} with error: {1!s}'.
-            format(artifacts_filter_file_path, exception))
+          format(artifacts_filter_file_path, exception))
 
     self.assertEqual(
-      len(find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY]), 1)
+        len(find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY]), 1)
 
     win_registry_reader = \
       windows_registry_parser.FileObjectWinRegistryFileReader()
@@ -153,7 +154,7 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
 
     searcher = dfwinreg_registry_searcher.WinRegistrySearcher(win_registry)
     key_paths = list(searcher.Find(find_specs=find_specs[
-      artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY]))
+        artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY]))
 
     self.assertIsNotNone(key_paths)
 
@@ -162,7 +163,7 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
 
     with self.assertRaises(IOError):
       test_filter_file = artifacts_filter_file.ArtifactsFilterFile(
-        'thisfiledoesnotexist', knowledge_base)
+          'thisfiledoesnotexist', knowledge_base)
       test_filter_file.BuildFindSpecs()
 
   #def test_ExpandGlobs(self):

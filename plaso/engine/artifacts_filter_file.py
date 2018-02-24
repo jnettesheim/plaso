@@ -50,130 +50,147 @@ class ArtifactsFilterFile(object):
     Args:
       environment_variables (Optional[list[EnvironmentVariableArtifact]]):
           environment variables.
-
-    Returns:
-      list[dfvfs.FindSpec]: find specification.
     """
-    path_attributes = {}
-    if environment_variables:
-      for environment_variable in environment_variables:
-        attribute_name = environment_variable.name.lower()
-        attribute_value = environment_variable.value
-        if not isinstance(attribute_value, py2to3.STRING_TYPES):
-          continue
-
-        # Remove the drive letter.
-        if len(attribute_value) >= 2 and attribute_value[1] == ':':
-          _, _, attribute_value = attribute_value.rpartition(':')
-
-        # if attribute_value.startswith('\\'):
-        #  attribute_value = attribute_value.replace('\\', '/')
-
-        path_attributes[attribute_name] = attribute_value
+    path_attributes = self._BuildPathAttributes(environment_variables)
 
     find_specs = {}
-    with open(self._path, 'rb') as file_object:
-      artifact_registry = artifacts_registry.ArtifactDefinitionsRegistry()
-      artifact_reader = artifacts_reader.YamlArtifactsReader()
-      # artifact_definitions = list(artifact_reader.ReadFileObject(file_object))
+    artifact_registry = artifacts_registry.ArtifactDefinitionsRegistry()
+    artifact_reader = artifacts_reader.YamlArtifactsReader()
 
-      try:
-        artifact_registry.ReadFromFile(artifact_reader, self._path)
+    try:
+      artifact_registry.ReadFromFile(artifact_reader, self._path)
 
-      except (KeyError, artifacts_errors.FormatError) as exception:
-        raise errors.BadConfigOption((
-                                       'Unable to read artifact definitions '
-                                       'from: {0:s} with error: ''{1!s}')
-                                     .format(self._path, exception))
+    except (KeyError, artifacts_errors.FormatError) as exception:
+      raise errors.BadConfigOption((
+          'Unable to read artifact definitions from: {0:s} with '
+          'error: ''{1!s}').format(self._path, exception))
 
-      undefined_artifacts = artifact_registry.GetUndefinedArtifacts()
-      if undefined_artifacts:
-        raise errors.MissingDependencyError(
+    undefined_artifacts = artifact_registry.GetUndefinedArtifacts()
+    if undefined_artifacts:
+      raise artifacts_errors.MissingDependencyError(
           'Artifacts group referencing undefined artifacts: {0}'.format(
-            undefined_artifacts))
+              undefined_artifacts))
 
-      for definition in artifact_registry.GetDefinitions():
-        for source in definition.sources:
-          if source.type_indicator == artifact_types.TYPE_INDICATOR_FILE:
-            for path_entry in source.paths:
-              for path in self._ExpandGlobs(path_entry):
-                if path_attributes:
-                  try:
-                    if '%%environ_' in path:
-                      path = path.replace('%%environ_', '{')
-                      path = path.replace('%%', '}')
-                      path = path.format(**path_attributes)
-                  except KeyError as exception:
-                    logging.error((
-                        'Unable to expand path filter: {0:s} with error: '
-                        '{1:s}').format(path, exception))
-                    continue
+    for definition in artifact_registry.GetDefinitions():
+      for source in definition.sources:
+        if source.type_indicator == artifact_types.TYPE_INDICATOR_FILE:
+          for path_entry in source.paths:
+            self.BuildFindSpecsFromFileArtifact(path_entry, source.separator,
+                                                path_attributes, find_specs)
+        elif (source.type_indicator ==
+              artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY):
+          keys = set(source.keys)
+          for key_entry in keys:
+            self.BuildFindSpecsFromRegistryArtifact(key_entry,
+                                                    path_attributes,
+                                                    find_specs)
+        elif (source.type_indicator ==
+              artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_VALUE):
+          logging.warning(('Unable to handle Registry Value, extracting '
+                           'key only: {0:s} ').format(source.key_value_pairs))
 
-                if '%%' in path:
-                  logging.warning(('Unable to expand path attribute, unknown '
-                                   'variable: {0:s} ').format(path))
-                  continue
-
-                if not path.startswith('/') and not path.startswith('\\'):
-                  logging.warning((
-                      'The path filter must be defined as an absolute path: '
-                      '{0:s}').format(path))
-                  continue
-
-                # Convert the path filters into a list of path segments and strip
-                # the root path segment.
-                path_segments = path.split(source.separator)
-                path_segments.pop(0)
-
-                if not path_segments[-1]:
-                  logging.warning(
-                      'Empty last path segment in path filter: {0:s}'.format(
-                        path))
-                  continue
-
-                find_spec = file_system_searcher.FindSpec(
-                    location_glob=path_segments, case_sensitive=False)
-                if artifact_types.TYPE_INDICATOR_FILE in find_specs:
-                  find_specs[artifact_types.TYPE_INDICATOR_FILE].append(find_spec)
-                else:
-                  find_specs[artifact_types.TYPE_INDICATOR_FILE] = []
-                  find_specs[artifact_types.TYPE_INDICATOR_FILE].append(find_spec)
-          elif (source.type_indicator ==
-                artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY or
-                artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_VALUE):
-            if source.type_indicator == artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY:
-              keys = set(source.keys)
-            elif source.type_indicator == artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_VALUE:
-              for key_pair in source.key_value_pairs:
-                if keys is None:
-                  keys = set()
-                  keys.add(key_pair.get('key'))
-                keys.add(key_pair.get('key'))
-            for key_entry in keys:
-              for key in self._ExpandGlobs(key_entry):
-                if path_attributes:
-                  try:
-                    key = key.replace('%%environ_', '{')
-                    key = key.replace('%%', '}')
-                    key = key.format(**path_attributes)
-                  except KeyError as exception:
-                    logging.error((
-                        'Unable to expand path filter: {0:s} with error: '
-                        '{1:s}').format(key, exception))
-                    continue
-                find_spec = registry_searcher.FindSpec(
-                  key_path_glob=key)
-              if artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY in find_specs:
-                find_specs[
-                  artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(find_spec)
-              else:
-                find_specs[
-                  artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY] = []
-                find_specs[
-                  artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(
-                  find_spec)
+          for key_pair in source.key_value_pairs:
+            if keys is None:
+              keys = set()
+              keys.add(key_pair.get('key'))
+            keys.add(key_pair.get('key'))
+          for key_entry in keys:
+            self.BuildFindSpecsFromRegistryArtifact(key_entry,
+                                                    path_attributes,
+                                                    find_specs)
     self._knowledge_base.SetValue(ARTIFACTS_FILTER_FILE, find_specs)
 
+  def BuildFindSpecsFromFileArtifact(self, path_entry, separator,
+                                     path_attributes, find_specs):
+    """Build find specification from a forensic artifacts file.
+
+    Args:
+      path_entry (str):  Current file system path to add.
+          environment variables.
+      separator (str): File system path separator.
+      path_attributes list(str):  Environment variable attributes used to
+          dynamically populate environment variables in key.
+      find_specs dict[artifacts.artifact_types]:  Dictionary containing
+          find_specs.
+    """
+    for path in self._ExpandGlobs(path_entry):
+      if path_attributes:
+        try:
+          if '%%environ_' in path:
+            path = path.replace('%%environ_', '{')
+            path = path.replace('%%', '}')
+            path = path.format(**path_attributes)
+        except KeyError as exception:
+          logging.error((
+              'Unable to expand path filter: {0:s} with error: '
+              '{1:s}').format(path, exception))
+          continue
+
+      if '%%' in path:
+        logging.warning((
+            'Unable to expand path attribute, unknown '
+            'variable: {0:s} ').format(path))
+        continue
+
+      if not path.startswith('/') and not path.startswith('\\'):
+        logging.warning((
+            'The path filter must be defined as an absolute path: '
+            '{0:s}').format(path))
+        continue
+
+      # Convert the path filters into a list of path segments and
+      # strip the root path segment.
+      path_segments = path.split(separator)
+      path_segments.pop(0)
+
+      if not path_segments[-1]:
+        logging.warning(
+            'Empty last path segment in path filter: {0:s}'.format(path))
+        continue
+
+      find_spec = file_system_searcher.FindSpec(
+          location_glob=path_segments, case_sensitive=False)
+      if artifact_types.TYPE_INDICATOR_FILE in find_specs:
+        find_specs[artifact_types.TYPE_INDICATOR_FILE].append(
+            find_spec)
+      else:
+        find_specs[artifact_types.TYPE_INDICATOR_FILE] = []
+        find_specs[artifact_types.TYPE_INDICATOR_FILE].append(
+            find_spec)
+
+  def BuildFindSpecsFromRegistryArtifact(self, key_entry,
+                                         path_attributes, find_specs):
+    """Build find specification from a forensic artifacts file.
+
+    Args:
+      key_entry (str):  Current file system key to add.
+      path_attributes list(str):  Environment variable attributes used to
+          dynamically populate environment variables in key.
+      find_specs dict[artifacts.artifact_types]:  Dictionary containing
+          find_specs.
+    """
+    for key in self._ExpandGlobs(key_entry):
+      if path_attributes:
+        try:
+          key = key.replace('%%environ_', '{')
+          key = key.replace('%%', '}')
+          key = key.format(**path_attributes)
+        except KeyError as exception:
+          logging.error((
+              'Unable to expand path filter: {0:s} with error: '
+              '{1:s}').format(key, exception))
+          continue
+      find_spec = registry_searcher.FindSpec(
+          key_path_glob=key)
+    if (artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY
+        in find_specs):
+      find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(
+          find_spec)
+    else:
+      find_specs[
+          artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY] = []
+      find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(
+          find_spec)
 
   def _ExpandGlobs(self, path):
     """Expand globs present in an artifact entry.
@@ -185,7 +202,7 @@ class ArtifactsFilterFile(object):
       list[str]: String path expanded for each glob.
     """
 
-    match = re.search('(.*)\*\*(\d+)?$', path)
+    match = re.search(r'(.*)\*\*(\d+)?$', path)
     if match:
       if match.group(2):
         iterations = match.group(2)
@@ -207,5 +224,31 @@ class ArtifactsFilterFile(object):
       path (str): String path expanded with wildcards.
     """
     for _ in range(count):
-      path += '\*'
+      path += r'\*'
     return path
+
+  def _BuildPathAttributes(self, environment_variables=None):
+    """Build find specification from a forensic artifacts file.
+
+    Args:
+      environment_variables (Optional[list[EnvironmentVariableArtifact]]):
+          environment variables.
+
+    Returns:
+      path_attributes dict[str]:  Dictionary containing the path attributes, per
+          their name.
+    """
+    path_attributes = {}
+    if environment_variables:
+      for environment_variable in environment_variables:
+        attribute_name = environment_variable.name.lower()
+        attribute_value = environment_variable.value
+        if not isinstance(attribute_value, py2to3.STRING_TYPES):
+          continue
+
+        # Remove the drive letter.
+        if len(attribute_value) >= 2 and attribute_value[1] == ':':
+          _, _, attribute_value = attribute_value.rpartition(':')
+        path_attributes[attribute_name] = attribute_value
+
+    return path_attributes
