@@ -44,6 +44,7 @@ class StatusView(object):
       tool_name (str): namd of the tool.
     """
     super(StatusView, self).__init__()
+    self._artifacts_filter_file = None
     self._filter_file = None
     self._mode = self.MODE_WINDOW
     self._output_writer = output_writer
@@ -313,6 +314,9 @@ class StatusView(object):
     self._output_writer.Write(
         'Source type\t: {0:s}\n'.format(self._source_type))
 
+    if self._artifacts_filter_file:
+      self._output_writer.Write('Artifacts filter file\t: {0:s}\n'.format(
+          self._artifacts_filter_file))
     if self._filter_file:
       self._output_writer.Write('Filter file\t: {0:s}\n'.format(
           self._filter_file))
@@ -385,14 +389,17 @@ class StatusView(object):
     """
     self._mode = mode
 
-  def SetSourceInformation(self, source_path, source_type, filter_file=None):
+  def SetSourceInformation(self, source_path, source_type,
+                           artifacts_filter_file=None, filter_file=None):
     """Sets the source information.
 
     Args:
       source_path (str): path of the source.
       source_type (str): source type.
+      artifacts_filter_file (Optional[str]): artifacts filter file.
       filter_file (Optional[str]): filter file.
     """
+    self._artifacts_filter_file = artifacts_filter_file
     self._filter_file = filter_file
     self._source_path = source_path
     self._source_type = self._SOURCE_TYPES.get(source_type, 'UNKNOWN')

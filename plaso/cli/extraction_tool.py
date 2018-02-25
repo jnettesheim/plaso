@@ -73,6 +73,7 @@ class ExtractionTool(
     """
     # TODO: pass preferred_encoding.
     configuration = configurations.ProcessingConfiguration()
+    configuration.artifacts_filter_file = self._artifacts_filter_file
     configuration.credentials = self._credential_configurations
     configuration.debug_output = self._debug_mode
     configuration.event_extraction.text_prepend = self._text_prepend

@@ -4,8 +4,11 @@
 
 from __future__ import unicode_literals
 
+import tempfile
 import unittest
 
+from plaso.engine import artifacts_filter_file
+from plaso.engine import knowledge_base as knowledge_base_engine
 from plaso.parsers import winreg
 # Register all plugins.
 from plaso.parsers import winreg_plugins  # pylint: disable=unused-import
@@ -76,6 +79,78 @@ class WinRegistryParserTest(test_lib.ParserTestCase):
     """Tests the Parse function on a SYSTEM file."""
     parser = winreg.WinRegistryParser()
     storage_writer = self._ParseFile(['SYSTEM'], parser)
+
+    events = list(storage_writer.GetEvents())
+
+    parser_chains = self._GetParserChains(events)
+
+    # Check the existence of few known plugins, see if they
+    # are being properly picked up and are parsed.
+    plugin_names = [
+        'windows_usbstor_devices', 'windows_boot_execute',
+        'windows_services']
+    for plugin in plugin_names:
+      expected_parser_chain = self._PluginNameToParserChain(plugin)
+      self.assertTrue(
+          expected_parser_chain in parser_chains,
+          'Chain {0:s} not found in events.'.format(expected_parser_chain))
+
+    # Check that the number of events produced by each plugin are correct.
+    parser_chain = self._PluginNameToParserChain('windows_usbstor_devices')
+    self.assertEqual(parser_chains.get(parser_chain, 0), 10)
+
+    parser_chain = self._PluginNameToParserChain('windows_boot_execute')
+    self.assertEqual(parser_chains.get(parser_chain, 0), 4)
+
+    parser_chain = self._PluginNameToParserChain('windows_services')
+    self.assertEqual(parser_chains.get(parser_chain, 0), 831)
+
+  @shared_test_lib.skipUnlessHasTestFile(['SYSTEM'])
+  def testParseSystemWithArtifactsFilter(self):
+    """Tests the Parse function on a SYSTEM file with artifact filters."""
+    parser = winreg.WinRegistryParser()
+    knowledge_base = knowledge_base_engine.KnowledgeBase()
+    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+      test_filter_file = artifacts_filter_file.ArtifactsFilterFile(
+          temp_file.name, knowledge_base)
+      temp_file.write(b'name: TestRegistryKey\n')
+      temp_file.write(b'doc: Test Registry Doc Key\n')
+      temp_file.write(b'sources:\n')
+      temp_file.write(b'- type: REGISTRY_KEY\n')
+      temp_file.write(b'  attributes:\n')
+      temp_file.write(b'    keys:\n')
+      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\ControlSet001\\'
+                      b'services\\**\'\n')
+      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\ControlSet002\\'
+                      b'services\\**\'\n')
+      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\'
+                      b'CurrentControlSet\\Enum\\USBSTOR\'\n')
+      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\'
+                      b'CurrentControlSet\\Enum\\USBSTOR\\**\'\n')
+      temp_file.write(b'supported_os: [Windows]\n')
+      temp_file.write(b'---\n')
+      temp_file.write(b'name: TestRegistryValue\n')
+      temp_file.write(b'doc: Test Registry Doc Value\n')
+      temp_file.write(b'sources:\n')
+      temp_file.write(b'- type: REGISTRY_VALUE\n')
+      temp_file.write(b'  attributes:\n')
+      temp_file.write(b'    key_value_pairs: \n')
+      temp_file.write(b'      - {key: \'HKEY_LOCAL_MACHINE\\System\\'
+                      b'ControlSet001\\Control\\Session Manager\', '
+                      b'value: \'BootExecute\'}\n')
+      temp_file.write(b'      - {key: \'HKEY_LOCAL_MACHINE\\System\\'
+                      b'ControlSet002\\Control\\Session Manager\', '
+                      b'value: \'BootExecute\'}\n')
+      temp_file.write(b'supported_os: [Windows]\n')
+      temp_file.write(b'\n')
+
+    test_filter_file.BuildFindSpecs(environment_variables=None)
+
+    find_specs = {
+        artifacts_filter_file.ARTIFACTS_FILTER_FILE : knowledge_base.GetValue(
+            artifacts_filter_file.ARTIFACTS_FILTER_FILE)}
+    storage_writer = self._ParseFile(['SYSTEM'], parser,
+                                     knowledge_base_values=find_specs)
 
     events = list(storage_writer.GetEvents())
 
