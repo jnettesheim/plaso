@@ -56,7 +56,8 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
       temp_file.write(b'- type: FILE\n')
       temp_file.write(b'  attributes:\n')
       temp_file.write(b'    paths: \n')
-      temp_file.write(b'      - \'%%environ_systemdrive%%\\test_data\\*.evtx\'\n')
+      temp_file.write(b'      - \'%%environ_systemdrive%%\\test_data\\'
+                      b'*.evtx\'\n')
       temp_file.write(b'      - \'\\test_data\\testdir\\filter_*.txt\'\n')
       temp_file.write(b'      - \'\\does_not_exist\\some_file_*.txt\'\n')
       temp_file.write(b'      - \'failing\\\'\n')
