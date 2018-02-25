@@ -233,11 +233,16 @@ class ArtifactsFilterFile(object):
     Returns:
       path (str): String path expanded with wildcards.
     """
+    if '\\' in path:
+      replacement = r'\*'
+    else:
+      replacement = r'/*'
+
     for number in range(count):
       if number == 0:
         path += r'*'
       else:
-        path += r'\*'
+        path += replacement
     return path
 
   def _BuildPathAttributes(self, environment_variables=None):
