@@ -120,17 +120,17 @@ class WinRegistryParserTest(test_lib.ParserTestCase):
       temp_file.write(b'  attributes:\n')
       temp_file.write(b'    keys:\n')
       temp_file.write(
-          b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\'
-          b'services\\*\\*\'\n')
+          b'      - \'HKEY_LOCAL_MACHINE\\System\\ControlSet001\\'
+          b'services\\**\'\n')
       temp_file.write(
-          b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\'
-          b'services\\*\\Parameters\\*\'\n')
+          b'      - \'HKEY_LOCAL_MACHINE\\System\\ControlSet002\\'
+          b'services\\**\'\n')
       temp_file.write(
           b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\'
           b'Enum\\USBSTOR\'\n')
       temp_file.write(
           b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\'
-          b'Enum\\USBSTOR\\*\'\n')
+          b'Enum\\USBSTOR\\**\'\n')
       temp_file.write(b'supported_os: [Windows]\n')
       temp_file.write(b'---\n')
       temp_file.write(b'name: TestRegistryValue\n')
@@ -138,17 +138,23 @@ class WinRegistryParserTest(test_lib.ParserTestCase):
       temp_file.write(b'sources:\n')
       temp_file.write(b'- type: REGISTRY_VALUE\n')
       temp_file.write(b'  attributes:\n')
-      temp_file.write(
-        b'    key_value_pairs: [{key: \'HKEY_LOCAL_MACHINE\\System\\'
-        b'CurrentControlSet\\Control\\Session Manager\', '
-        b'value: \'BootExecute\'}]\n')
+      temp_file.write(b'    key_value_pairs: \n')
+      temp_file.write(b'      - {key: \'HKEY_LOCAL_MACHINE\\System\\'
+                      b'ControlSet001\\Control\\Session Manager\', '
+                      b'value: \'BootExecute\'}\n')
+      temp_file.write(b'      - {key: \'HKEY_LOCAL_MACHINE\\System\\'
+                      b'ControlSet002\\Control\\Session Manager\', '
+                      b'value: \'BootExecute\'}\n')
       temp_file.write(b'supported_os: [Windows]\n')
       temp_file.write(b'\n')
 
-    test_filter_file.BuildFindSpecs(
-        environment_variables=None)
+    test_filter_file.BuildFindSpecs(environment_variables=None)
 
-    storage_writer = self._ParseFile(['SYSTEM'], parser)
+    find_specs = {
+        artifacts_filter_file.ARTIFACTS_FILTER_FILE : knowledge_base.GetValue(
+            artifacts_filter_file.ARTIFACTS_FILTER_FILE)}
+    storage_writer = self._ParseFile(['SYSTEM'], parser,
+                                     knowledge_base_values=find_specs)
 
     events = list(storage_writer.GetEvents())
 

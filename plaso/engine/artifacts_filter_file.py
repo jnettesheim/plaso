@@ -20,7 +20,12 @@ from plaso.lib import errors
 
 
 ARTIFACTS_FILTER_FILE = 'ARTIFACTS_FILTER_FILE'
-COMPATIBLE_DFWINREG_KEYS = ['HKEY_LOCAL_MACHINE']
+COMPATIBLE_DFWINREG_KEYS = ['HKEY_LOCAL_MACHINE',
+                            'HKEY_LOCAL_MACHINE\SYSTEM',
+                            'HKEY_LOCAL_MACHINE\SOFTWARE',
+                            'HKEY_LOCAL_MACHINE\SAM',
+                            'HKEY_LOCAL_MACHINE\SECURITY']
+RECURSIVE_GLOB_LIMIT = 10
 
 
 class ArtifactsFilterFile(object):
@@ -37,13 +42,11 @@ class ArtifactsFilterFile(object):
 
     Args:
       path (str): path to a file that contains one or more forensic artifacts.
+      knowledge_base (KnowledgeBase): Knowledge base for Log2Timeline.
     """
     super(ArtifactsFilterFile, self).__init__()
     self._path = path
     self._knowledge_base = knowledge_base
-
-  # TODO: split read and validation from BuildFindSpecs, raise instead of log
-  # TODO: determine how to apply the path filters for exclusion.
 
   def BuildFindSpecs(self, environment_variables=None):
     """Build find specification from a forensic artifacts file.
@@ -88,19 +91,18 @@ class ArtifactsFilterFile(object):
                                                       find_specs)
         elif (source.type_indicator ==
               artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_VALUE):
+          # TODO: Handle Registry Values Once Supported in dfwinreg.
           logging.warning(('Unable to handle Registry Value, extracting '
                            'key only: {0:s} ').format(source.key_value_pairs))
 
           for key_pair in source.key_value_pairs:
-            if keys is None:
-              keys = set()
-              keys.add(key_pair.get('key'))
+            keys = set()
             keys.add(key_pair.get('key'))
-          for key_entry in keys:
-            if self._CheckKeyCompatibility(key_entry):
-              self.BuildFindSpecsFromRegistryArtifact(key_entry,
-                                                      path_attributes,
-                                                      find_specs)
+            for key_entry in keys:
+              if self._CheckKeyCompatibility(key_entry):
+                self.BuildFindSpecsFromRegistryArtifact(key_entry,
+                                                        path_attributes,
+                                                        find_specs)
         else:
           logging.warning(('Unable to handle artifact, plaso does not '
                            'support: {0:s} ').format(source.type_indicator))
@@ -132,12 +134,6 @@ class ArtifactsFilterFile(object):
               '{1:s}').format(path, exception))
           continue
 
-      if '%%' in path:
-        logging.warning((
-            'Unable to expand path attribute, unknown '
-            'variable: {0:s} ').format(path))
-        continue
-
       if not path.startswith('/') and not path.startswith('\\'):
         logging.warning((
             'The path filter must be defined as an absolute path: '
@@ -156,13 +152,10 @@ class ArtifactsFilterFile(object):
 
       find_spec = file_system_searcher.FindSpec(
           location_glob=path_segments, case_sensitive=False)
-      if artifact_types.TYPE_INDICATOR_FILE in find_specs:
-        find_specs[artifact_types.TYPE_INDICATOR_FILE].append(
-            find_spec)
-      else:
+      if artifact_types.TYPE_INDICATOR_FILE not in find_specs:
         find_specs[artifact_types.TYPE_INDICATOR_FILE] = []
-        find_specs[artifact_types.TYPE_INDICATOR_FILE].append(
-            find_spec)
+      find_specs[artifact_types.TYPE_INDICATOR_FILE].append(
+          find_spec)
 
   def BuildFindSpecsFromRegistryArtifact(self, key_entry,
                                          path_attributes, find_specs):
@@ -188,13 +181,8 @@ class ArtifactsFilterFile(object):
           continue
       find_spec = registry_searcher.FindSpec(
           key_path_glob=key)
-    if (artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY
-        in find_specs):
-      find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(
-          find_spec)
-    else:
-      find_specs[
-          artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY] = []
+      if (artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY not in find_specs):
+        find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY] = []
       find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(
           find_spec)
 
@@ -208,10 +196,10 @@ class ArtifactsFilterFile(object):
       (bool): Boolean whether key is compatible or not.
     """
     key_path_prefix = key.split('\\')[0]
-    if key_path_prefix in COMPATIBLE_DFWINREG_KEYS:
+    if key_path_prefix.upper() in COMPATIBLE_DFWINREG_KEYS:
       return True
-    # logging.warning('Key {0:s}, has a prefix {1:s} that is not supported '
-    #                'by dfwinreg presently'.format(key, key_path_prefix))
+    logging.warning('Key {0:s}, has a prefix {1:s} that is not supported '
+                    'by dfwinreg presently'.format(key, key_path_prefix))
     return False
 
   def _ExpandGlobs(self, path):
@@ -229,7 +217,9 @@ class ArtifactsFilterFile(object):
       if match.group(2):
         iterations = match.group(2)
       else:
-        iterations = 10
+        iterations = RECURSIVE_GLOB_LIMIT
+        logging.warning('Path {0:s} contains fully recursive glob, limiting '
+                        'to ten levels'.format(path))
       paths = [self._BuildString(match.group(1), counter) for counter in
                range(int(iterations))]
       return paths
