@@ -236,7 +236,8 @@ class ArtifactsFilterFile(object):
     for number in range(count):
       if number == 0:
         path += r'*'
-      path += r'\*'
+      else:
+        path += r'\*'
     return path
 
   def _BuildPathAttributes(self, environment_variables=None):
