@@ -68,12 +68,6 @@ class ArtifactsFilterFile(object):
           'Unable to read artifact definitions from: {0:s} with '
           'error: ''{1!s}').format(self._path, exception))
 
-    undefined_artifacts = artifact_registry.GetUndefinedArtifacts()
-    if undefined_artifacts:
-      raise artifacts_errors.MissingDependencyError(
-          'Artifacts group referencing undefined artifacts: {0}'.format(
-              undefined_artifacts))
-
     for definition in artifact_registry.GetDefinitions():
       for source in definition.sources:
         if source.type_indicator == artifact_types.TYPE_INDICATOR_FILE:
@@ -142,6 +136,10 @@ class ArtifactsFilterFile(object):
       # Convert the path filters into a list of path segments and
       # strip the root path segment.
       path_segments = path.split(separator)
+      if len(path_segments) == 1 and '\\' in path_segments[0]:
+        logging.warning('Potentially bad separator = {0:s} , trying \'\\\''
+                        .format(separator))
+        path_segments = path.split('\\')
       path_segments.pop(0)
 
       if not path_segments[-1]:
@@ -235,7 +233,9 @@ class ArtifactsFilterFile(object):
     Returns:
       path (str): String path expanded with wildcards.
     """
-    for _ in range(count):
+    for number in range(count):
+      if number == 0:
+        path += r'*'
       path += r'\*'
     return path
 
