@@ -218,41 +218,6 @@ class WinRegistryParser(interface.FileObjectParser):
       self._ParseKey(parser_mediator, registry_key)
 
 
-  def _ParseKeysFromFindSpecs(self, parser_mediator, win_registry, find_specs):
-    """Parses the Registry keys from FindSpecs.
-
-    Args:
-      parser_mediator (ParserMediator): parser mediator.
-      win_registry (dfwinreg.WinRegistryKey): root Windows Registry key.
-      find_specs (dfwinreg.FindSpecs): Keys to search for.
-    """
-    searcher = dfwinreg_registry_searcher.WinRegistrySearcher(win_registry)
-    for registry_key_path in list(searcher.Find(find_specs=find_specs)):
-
-      registry_key = searcher.GetKeyByPath(registry_key_path)
-
-      if parser_mediator.abort:
-        break
-
-      matching_plugin = None
-
-      normalized_key_path = self._NormalizeKeyPath(registry_key.path)
-      if self._path_filter.CheckPath(normalized_key_path):
-        matching_plugin = self._plugin_per_key_path[normalized_key_path]
-
-      else:
-        for plugin in self._plugins_without_key_paths:
-          if self._CanProcessKeyWithPlugin(registry_key, plugin):
-            matching_plugin = plugin
-            break
-
-      if not matching_plugin:
-        matching_plugin = self._default_plugin
-
-      if matching_plugin:
-        self._ParseKeyWithPlugin(parser_mediator, registry_key, matching_plugin)
-
-
   def ParseFileObject(self, parser_mediator, file_object, **kwargs):
     """Parses a Windows Registry file-like object.
 
