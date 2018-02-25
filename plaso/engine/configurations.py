@@ -165,6 +165,7 @@ class ProcessingConfiguration(interface.AttributeContainer):
   """Configuration settings for processing.
 
   Attributes:
+    artifacts_filter_file (str): path to a file with artifacts definitions.
     credentials (list[CredentialConfiguration]): credential configurations.
     data_location (str): path to the data files.
     debug_output (bool): True if debug output should be enabled.
@@ -186,6 +187,7 @@ class ProcessingConfiguration(interface.AttributeContainer):
   def __init__(self):
     """Initializes a process configuration object."""
     super(ProcessingConfiguration, self).__init__()
+    self.artifacts_filter_file = None
     self.credentials = []
     self.data_location = None
     self.debug_output = False

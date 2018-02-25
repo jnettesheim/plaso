@@ -19,6 +19,7 @@ class Session(interface.AttributeContainer):
     aborted (bool): True if the session was aborted.
     analysis_reports_counter (collections.Counter): number of analysis reports
         per analysis plugin.
+    artifacts_filter_file (str): path to a file containing artifact definitions.
     command_line_arguments (str): command line arguments.
     completion_time (int): time that the session was completed. Contains the
         number of micro seconds since January 1, 1970, 00:00:00 UTC.
@@ -47,6 +48,7 @@ class Session(interface.AttributeContainer):
     super(Session, self).__init__()
     self.aborted = False
     self.analysis_reports_counter = collections.Counter()
+    self.artifacts_filter_file = None
     self.command_line_arguments = None
     self.completion_time = None
     self.debug_mode = False
@@ -97,6 +99,7 @@ class Session(interface.AttributeContainer):
     Args:
       session_start (SessionStart): session start attribute container.
     """
+    self.artifacts_filter_file = session_start.artifacts_filter_file
     self.command_line_arguments = session_start.command_line_arguments
     self.debug_mode = session_start.debug_mode
     self.enabled_parser_names = session_start.enabled_parser_names
@@ -133,6 +136,7 @@ class Session(interface.AttributeContainer):
       SessionStart: session start attribute container.
     """
     session_start = SessionStart()
+    session_start.artifacts_filter_file = self.artifacts_filter_file
     session_start.command_line_arguments = self.command_line_arguments
     session_start.debug_mode = self.debug_mode
     session_start.enabled_parser_names = self.enabled_parser_names
@@ -184,6 +188,7 @@ class SessionStart(interface.AttributeContainer):
   """Session start attribute container.
 
   Attributes:
+    artifacts_filter_file (str):  path to a file with artifacts definitions.
     command_line_arguments (str): command line arguments.
     debug_mode (bool): True if debug mode was enabled.
     enabled_parser_names (list[str]): parser and parser plugin names that
@@ -211,6 +216,7 @@ class SessionStart(interface.AttributeContainer):
           session completion information.
     """
     super(SessionStart, self).__init__()
+    self.artifacts_filter_file = None
     self.command_line_arguments = None
     self.debug_mode = False
     self.enabled_parser_names = None

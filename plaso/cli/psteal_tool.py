@@ -11,6 +11,7 @@ import os
 import sys
 import textwrap
 
+from artifacts import definitions as artifact_types
 from dfvfs.lib import definitions as dfvfs_definitions
 
 # The following import makes sure the output modules are registered.
@@ -21,6 +22,7 @@ from plaso.cli import status_view
 from plaso.cli import tool_options
 from plaso.cli import views
 from plaso.cli.helpers import manager as helpers_manager
+from plaso.engine import artifacts_filter_file
 from plaso.engine import engine
 from plaso.engine import filter_file
 from plaso.engine import knowledge_base
@@ -271,7 +273,9 @@ class PstealTool(
 
     self._status_view.SetMode(self._status_view_mode)
     self._status_view.SetSourceInformation(
-        self._source_path, source_type, filter_file=self._filter_file)
+        self._source_path, source_type,
+        artifacts_filter_file=self._artifacts_filter_file,
+        filter_file=self._filter_file)
 
     status_update_callback = (
         self._status_view.GetExtractionStatusUpdateCallback())
@@ -281,6 +285,7 @@ class PstealTool(
     self._output_writer.Write('Processing started.\n')
 
     session = engine.BaseEngine.CreateSession(
+        artifacts_filter_file=self._artifacts_filter_file,
         command_line_arguments=self._command_line_arguments,
         filter_file=self._filter_file,
         preferred_encoding=self.preferred_encoding,
@@ -316,7 +321,17 @@ class PstealTool(
     self._SetExtractionPreferredTimeZone(extraction_engine.knowledge_base)
 
     filter_find_specs = None
-    if configuration.filter_file:
+    if configuration.artifacts_filter_file:
+      environment_variables = (
+          extraction_engine.knowledge_base.GetEnvironmentVariables())
+      artifacts_filter_file_object = artifacts_filter_file.ArtifactsFilterFile(
+          configuration.artifacts_filter_file, extraction_engine.knowledge_base)
+      artifacts_filter_file_object.BuildFindSpecs(
+          environment_variables=environment_variables)
+      filter_find_specs = extraction_engine.knowledge_base.GetValue(
+          artifacts_filter_file.ArtifactsFilterFile)[
+              artifact_types.TYPE_INDICATOR_FILE]
+    elif configuration.filter_file:
       environment_variables = (
           extraction_engine.knowledge_base.GetEnvironmentVariables())
       filter_file_object = filter_file.FilterFile(configuration.filter_file)
