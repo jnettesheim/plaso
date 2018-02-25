@@ -69,7 +69,7 @@ class ArtifactsFilterFileArgumentsHelper(interface.ArgumentsHelper):
         artifacts_filter_file_path = os.path.join(
             data_location, artifacts_filter_file_basename)
         if os.path.isfile(artifacts_filter_file_path):
-            artifacts_filter_file = artifacts_filter_file_path
+          artifacts_filter_file = artifacts_filter_file_path
 
     if artifacts_filter_file and not os.path.isfile(artifacts_filter_file):
       raise errors.BadConfigOption(
