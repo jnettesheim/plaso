@@ -20,11 +20,11 @@ from plaso.lib import errors
 
 
 ARTIFACTS_FILTER_FILE = 'ARTIFACTS_FILTER_FILE'
-COMPATIBLE_DFWINREG_KEYS = ['HKEY_LOCAL_MACHINE',
-                            'HKEY_LOCAL_MACHINE\SYSTEM',
-                            'HKEY_LOCAL_MACHINE\SOFTWARE',
-                            'HKEY_LOCAL_MACHINE\SAM',
-                            'HKEY_LOCAL_MACHINE\SECURITY']
+COMPATIBLE_DFWINREG_KEYS = [r'HKEY_LOCAL_MACHINE',
+                            r'HKEY_LOCAL_MACHINE\SYSTEM',
+                            r'HKEY_LOCAL_MACHINE\SOFTWARE',
+                            r'HKEY_LOCAL_MACHINE\SAM',
+                            r'HKEY_LOCAL_MACHINE\SECURITY']
 RECURSIVE_GLOB_LIMIT = 10
 
 
