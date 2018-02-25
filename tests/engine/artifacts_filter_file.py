@@ -68,11 +68,9 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
 
     environment_variable = artifacts.EnvironmentVariableArtifact(
         case_sensitive=False, name='SystemDrive', value='C:')
-    environment_variable_2 = artifacts.EnvironmentVariableArtifact(
-        case_sensitive=False, name='SystemRoot', value='C:Windows')
 
     test_filter_file.BuildFindSpecs(
-        environment_variables=[environment_variable, environment_variable_2])
+        environment_variables=[environment_variable])
     find_specs = knowledge_base.GetValue(
         artifacts_filter_file.ARTIFACTS_FILTER_FILE)
 
@@ -140,8 +138,8 @@ class BuildFindSpecsFromFileTest(shared_test_lib.BaseTestCase):
     self.assertEqual(
         len(find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY]), 1)
 
-    win_registry_reader = \
-      windows_registry_parser.FileObjectWinRegistryFileReader()
+    win_registry_reader = (
+        windows_registry_parser.FileObjectWinRegistryFileReader())
 
     file_entry = self._GetTestFileEntry(['SYSTEM'])
     file_object = file_entry.GetFileObject()

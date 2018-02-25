@@ -55,9 +55,8 @@ class ArtifactsFilterFile(object):
       environment_variables (Optional[list[EnvironmentVariableArtifact]]):
           environment variables.
     """
-    path_attributes = self._BuildPathAttributes(environment_variables)
-
     find_specs = {}
+    path_attributes = self._BuildPathAttributes(environment_variables)
     artifact_registry = artifacts_registry.ArtifactDefinitionsRegistry()
     artifact_reader = artifacts_reader.YamlArtifactsReader()
 
@@ -171,7 +170,8 @@ class ArtifactsFilterFile(object):
     for key in self._ExpandGlobs(key_entry):
       if path_attributes:
         try:
-          key = key.replace('%%environ_', '{')
+          # TODO: Fix, currently path attribute expansion will no work.
+          key = key.replace('%%', '{', 1)
           key = key.replace('%%', '}')
           key = key.format(**path_attributes)
         except KeyError as exception:

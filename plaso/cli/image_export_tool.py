@@ -331,7 +331,7 @@ class ImageExportTool(storage_media_tool.StorageMediaTool):
             artifacts_filter_file.ARTIFACTS_FILTER_FILE)[
                 artifact_types.TYPE_INDICATOR_FILE]
       elif filter_file_path:
-        environment_variables = (self._knowledge_base.GetEnvironmentVariables())
+        environment_variables = self._knowledge_base.GetEnvironmentVariables()
         filter_file_object = filter_file.FilterFile(filter_file_path)
         find_specs = filter_file_object.BuildFindSpecs(
             environment_variables=environment_variables)

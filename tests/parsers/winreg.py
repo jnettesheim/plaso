@@ -107,7 +107,7 @@ class WinRegistryParserTest(test_lib.ParserTestCase):
 
   @shared_test_lib.skipUnlessHasTestFile(['SYSTEM'])
   def testParseSystemWithArtifactsFilter(self):
-    """Tests the Parse function on a SYSTEM file."""
+    """Tests the Parse function on a SYSTEM file with artifact filters."""
     parser = winreg.WinRegistryParser()
     knowledge_base = knowledge_base_engine.KnowledgeBase()
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:

@@ -68,7 +68,6 @@ class FilterFile(object):
 
     find_specs = []
     with open(self._path, 'rb') as file_object:
-      print path_attributes
       for line in file_object:
         line = line.strip()
         if line.startswith('#'):
@@ -76,9 +75,7 @@ class FilterFile(object):
 
         if path_attributes:
           try:
-            print line
             line = line.format(**path_attributes)
-            print line
           except KeyError as exception:
             logging.error((
                 'Unable to expand path filter: {0:s} with error: '
