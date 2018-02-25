@@ -179,10 +179,10 @@ class ArtifactsFilterFile(object):
               'Unable to expand path filter: {0:s} with error: '
               '{1:s}').format(key, exception))
           continue
-      find_spec = registry_searcher.FindSpec(
-          key_path_glob=key)
+      find_spec = registry_searcher.FindSpec(key_path_glob=key)
       if (artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY not in find_specs):
         find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY] = []
+
       find_specs[artifact_types.TYPE_INDICATOR_WINDOWS_REGISTRY_KEY].append(
           find_spec)
 

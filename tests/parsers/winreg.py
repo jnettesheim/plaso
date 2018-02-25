@@ -119,18 +119,14 @@ class WinRegistryParserTest(test_lib.ParserTestCase):
       temp_file.write(b'- type: REGISTRY_KEY\n')
       temp_file.write(b'  attributes:\n')
       temp_file.write(b'    keys:\n')
-      temp_file.write(
-          b'      - \'HKEY_LOCAL_MACHINE\\System\\ControlSet001\\'
-          b'services\\**\'\n')
-      temp_file.write(
-          b'      - \'HKEY_LOCAL_MACHINE\\System\\ControlSet002\\'
-          b'services\\**\'\n')
-      temp_file.write(
-          b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\'
-          b'Enum\\USBSTOR\'\n')
-      temp_file.write(
-          b'      - \'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\'
-          b'Enum\\USBSTOR\\**\'\n')
+      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\ControlSet001\\'
+                      b'services\\**\'\n')
+      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\ControlSet002\\'
+                      b'services\\**\'\n')
+      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\'
+                      b'CurrentControlSet\\Enum\\USBSTOR\'\n')
+      temp_file.write(b'      - \'HKEY_LOCAL_MACHINE\\System\\'
+                      b'CurrentControlSet\\Enum\\USBSTOR\\**\'\n')
       temp_file.write(b'supported_os: [Windows]\n')
       temp_file.write(b'---\n')
       temp_file.write(b'name: TestRegistryValue\n')
